@@ -1,97 +1,68 @@
+<div align="center">
+
 # PostgreSQL Database Testing
 
-This repository demonstrates practical PostgreSQL querying and database QA testing for an online learning platform.
+**SQL analysis and database QA for an online learning platform**
 
-It converts two database assignments into a reproducible project containing a database schema, sample data, analytical queries, constraint tests, and execution documentation.
+7 tables · 8 analytical queries · 15 documented test cases
 
-## Project Objectives
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![pgAdmin](https://img.shields.io/badge/pgAdmin-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)
 
-- Build and populate a relational PostgreSQL database.
-- Write queries using sorting, aggregation, joins, and subqueries.
-- Validate `NOT NULL`, `UNIQUE`, `PRIMARY KEY`, `FOREIGN KEY`, and `DEFAULT` constraints.
-- Compare expected and actual database behavior.
-- Document test results and database defects clearly.
+I built a small learning-platform database, queried its data, and tested whether its constraints protect data integrity.
 
-## Repository Structure
+**[Explore the queries](#sql-and-qa-coverage)** · **[See the finding](#documented-finding)** · **[Run the project](#run-the-project)**
 
-```text
-database/
-  01-schema.sql          Database tables, keys, and constraints
-  02-seed-data.sql       Reproducible sample data
-  03-verification.sql    Initial data-integrity checks
-queries/
-  assignment-1-queries.sql
-tests/
-  01-not-null-tests.sql
-  02-unique-tests.sql
-  03-primary-key-tests.sql
-  04-foreign-key-tests.sql
-  05-default-tests.sql
-  run-all-tests.sql
-reports/
-  database-test-cases.md
-  execution-summary.md
-docs/
-  data-model.md
+</div>
+
+## Project at a glance
+
+- **SQL analysis:** eight queries use sorting, joins, aggregation, and a subquery to answer questions about courses, enrollments, scores, and revenue.
+- **Database QA:** 15 cases cover `NOT NULL`, `UNIQUE`, `PRIMARY KEY`, `FOREIGN KEY`, and `DEFAULT` behavior.
+- **Original assignment results:** 13 PASS and 2 FAIL. Both failures concerned the default course level. The schema in this repository includes the correction and regression checks; a new execution result is not recorded here.
+
+## SQL and QA coverage
+
+The [analytical queries](queries/learning-platform-queries.sql) include students per course, average assignment scores, course revenue, and users with no submissions. The [test cases](reports/database-test-cases.md) state each operation, expected result, and original assignment outcome. The runnable [SQL test suite](tests/run-all-tests.sql) checks both rejected invalid inserts and existing data for constraint violations.
+
+## Documented finding
+
+The original execution recorded a course inserted without `level` as `NULL`, although the expected value was `Beginner`. This affected **TC-DB-014** and **TC-DB-015**. The repository [schema](database/01-schema.sql) now defines `level VARCHAR(30) NOT NULL DEFAULT 'Beginner'`, and the [default tests](tests/05-default-tests.sql) check the corrected behavior. See the [execution summary](reports/execution-summary.md) for the original result.
+
+## Database model
+
+The sample platform connects roles, users, categories, courses, enrollments, assignments, and submissions:
+
+```mermaid
+erDiagram
+    ROLES ||--o{ USERS : assigns
+    CATEGORIES ||--o{ COURSES : classifies
+    USERS ||--o{ ENROLLMENTS : creates
+    COURSES ||--o{ ENROLLMENTS : receives
+    COURSES ||--o{ ASSIGNMENTS : contains
+    USERS ||--o{ SUBMISSIONS : submits
+    ASSIGNMENTS ||--o{ SUBMISSIONS : receives
 ```
 
-## Technologies
+Emails are required and unique; enrollments and submissions cannot duplicate the same user-course or user-assignment pair. The schema also checks nonnegative prices and scores. Sample records are reproducible project fixtures, not the original assignment data.
 
-- PostgreSQL
-- SQL
-- pgAdmin
-- Git
-- GitHub
+## Project files
 
-## Database Model
+- [Schema](database/01-schema.sql) · [Sample data](database/02-seed-data.sql) · [Baseline integrity checks](database/03-verification.sql)
+- [Analytical queries](queries/learning-platform-queries.sql) · [Constraint test suite](tests/run-all-tests.sql)
+- [Test cases](reports/database-test-cases.md) · [Original execution summary](reports/execution-summary.md)
 
-The project represents an online learning platform with roles, users, categories, courses, enrollments, assignments, and assignment submissions.
+## Run the project
 
-The table names, relationships, constraints, and query objectives are based on the supplied assignments. Additional supporting columns and sample records were added to make the project independently executable; they are project fixtures, not claimed as original assignment data.
-
-## How to Run
-
-Create a database named `learning_platform`, then run the files in this order:
+Create a dedicated PostgreSQL database named `learning_platform`, then run these commands from the repository root. **The schema script drops and recreates the project's tables**, so use a practice database.
 
 ```bash
 psql -U postgres -d learning_platform -f database/01-schema.sql
 psql -U postgres -d learning_platform -f database/02-seed-data.sql
 psql -U postgres -d learning_platform -f database/03-verification.sql
-psql -U postgres -d learning_platform -f queries/assignment-1-queries.sql
+psql -U postgres -d learning_platform -f queries/learning-platform-queries.sql
 psql -U postgres -d learning_platform -f tests/run-all-tests.sql
 ```
 
-In pgAdmin, open Query Tool and execute the same files in the same order.
-
-## Query Coverage
-
-The query set demonstrates:
-
-- Selecting user names and emails
-- Sorting courses by price
-- Finding the cheapest course
-- Joining students with enrolled courses
-- Counting students per course
-- Calculating average assignment scores
-- Calculating course revenue
-- Finding users with no assignment submissions
-
-## Database QA Coverage
-
-The test suite checks:
-
-- Required user fields reject `NULL`
-- Email values remain unique
-- Primary keys reject duplicates and `NULL`
-- Foreign keys preserve referential integrity
-- Course level defaults to `Beginner`
-
-Negative tests use PostgreSQL `DO` blocks and exception handling. A test passes only when the expected constraint violation occurs. Each test runs without leaving unwanted records in the database.
-
-## Documented Finding
-
-The supplied execution evidence reported that a course inserted without a level received `NULL` instead of `Beginner`. This was recorded as a failed `DEFAULT`-constraint test. The schema in this repository defines the expected default and includes a regression test to verify the corrected behavior.
-
-## Author
-
-Rahaf AlQura'an
+In pgAdmin, run the schema, seed data, verification, and query files in that order; then run the five numbered SQL files in `tests/` individually. The `run-all-tests.sql` wrapper uses `psql` commands and cannot be pasted into pgAdmin Query Tool as-is.
